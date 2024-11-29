@@ -1,0 +1,47 @@
+module load bcftools/1.19
+module load vcftools/0.1.16
+
+input_dir='/data/users/thatdude/bluewhaleref_split_pops/GOC'
+output_dir='/data/users/thatdude/bluewhaleref_split_pops/GOC/biSNPsONLYFiltered'
+
+# directory to bcfstats to check the stats of the filtered vcf files.
+bcfstats_dir='/data/users/winsp001/bcfstats'
+
+# defining file names + output file names
+VCF_FILE="${input_dir}/JointCalls_08_b_VariantFiltration_$(printf "%02d" $SLURM_ARRAY_TASK_ID)_GOC_population.vcf.gz"
+output_file="$output_dir/JointCalls_08_b_VariantFiltration_$(printf "%02d" $SLURM_ARRAY_TASK_ID)_GOC_biallelicsnps_PASS"
+
+if [ -f "$VCF_FILE" ]; then
+    BASENAME=$(basename ${VCF_FILE} .vcf.gz)
+
+    # Initial filtering: Remove indels and filtered variants
+    initial_filter="$output_dir/${BASENAME}_initial_filter.vcf"
+    vcftools --gzvcf ${VCF_FILE} --remove-indels --remove-filtered-all --recode --recode-INFO-all \
+        --stdout > "$initial_filter"
+    echo "Initial filtering success for ${VCF_FILE}"
+
+    # Generate stats for the initial filtered VCF
+    initial_stats="${bcfstats_dir}/${BASENAME}_initial_PASSING_STATS.txt"
+    bcftools stats "$initial_filter" > "$initial_stats"
+    echo "Initial stats generated for ${initial_filter}"
+
+    # Further filtering: Keep only biallelic SNPs
+    final_output="$output_dir/${BASENAME}_biallelic_snps.vcf"
+    bcftools view -m2 -M2 -v snps "$initial_filter" -O v -o "$final_output"
+    echo "Biallelic SNP filtering success for ${VCF_FILE}"
+
+    # Generate stats for the final filtered VCF
+    final_stats="${bcfstats_dir}/${BASENAME}_biallelicSNPsONLY_STATS.txt"
+    bcftools stats "$final_output" > "$final_stats"
+    echo "Final stats generated for ${final_output}"
+
+    # Compress the final filtered VCF
+    gzip -f "$final_output"
+    echo "Final output compressed for ${VCF_FILE}"
+
+    # Optional: Remove intermediate files to save space
+    rm "$initial_filter"
+    echo "Intermediate files removed for ${VCF_FILE}"
+
+    echo "Filtering DONE for ${VCF_FILE}!"
+fi
