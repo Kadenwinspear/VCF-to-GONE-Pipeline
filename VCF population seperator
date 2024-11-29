@@ -1,0 +1,54 @@
+# Define location of VCF containing multiple populations / individuals
+
+input_dir="/data/users/thatdude/finwhale_data/blue_ref_vcfs"
+
+# Define output directory location. 
+output_dir="/data/users/winsp001/bluewhaleref_split_pops"
+
+# load your specified version of bcftools
+module load bcftools/
+
+# Identify the names of the samples belonging to the populations of interest. This example VCF contains three populations. Edit as needed. 
+ENP_SAMPLES=(
+  ENPAK19 ENPAK20 ENPAK21 ENPAK22 ENPAK23 ENPAK24 ENPAK25 ENPAK26 ENPAK27 ENPAK28 ENPAK29 ENPAK30
+  ENPBC16 ENPBC17 ENPBC18 ENPCA02 ENPCA03 ENPCA04 ENPCA05 ENPCA06 ENPCA07 ENPCA08 ENPOR10 ENPOR11
+  ENPOR13 ENPWA14 ENPWA15
+)
+
+ESP_SAMPLES=(
+  ESPCL01 ESPCL02 ESPCL03 ESPCL04 ESPCL05 ESPCL06 ESPCL07 ESPCL08 ESPCL09 ESPCL10 ESPCL11 ESPCL12
+  ESPCL13 ESPCL14 ESPCL15 ESPCL16 ESPCL17 ESPCL18 ESPCL19 ESPCL20
+)
+
+GOC_SAMPLES=(
+  GOC002 GOC006 GOC025 GOC038 GOC050 GOC053 GOC063 GOC068 GOC071 GOC077 GOC082
+  GOC086 GOC091 GOC100 GOC112 GOC116 GOC125
+)
+
+# Convert sample lists to strings. 
+ENP_LIST=$(IFS=,; echo "${ENP_SAMPLES[*]}")
+ESP_LIST=$(IFS=,; echo "${ESP_SAMPLES[*]}")
+GOC_LIST=$(IFS=,; echo "${GOC_SAMPLES[*]}")
+
+# Define Array task. 
+VCF_FILE="${input_dir}/JointCalls_08_b_VariantFiltration_$(printf "%02d" $SLURM_ARRAY_TASK_ID).vcf.gz"
+
+# Define output file prefixes
+OUT_PREFIX_ENP="${output_dir}/JointCalls_08_b_VariantFiltration_$(printf "%02d" $SLURM_ARRAY_TASK_ID)_ENP_population.vcf.gz"
+OUT_PREFIX_ESP="${output_dir}/JointCalls_08_b_VariantFiltration_$(printf "%02d" $SLURM_ARRAY_TASK_ID)_ESP_population.vcf.gz"
+OUT_PREFIX_GOC="${output_dir}/JointCalls_08_b_VariantFiltration_$(printf "%02d" $SLURM_ARRAY_TASK_ID)_GOC_population.vcf.gz"
+
+# Uses bcftools to create VCFs for each population.
+echo "Filtering ENP samples from $VCF_FILE..."
+bcftools view -Oz -s "$ENP_LIST" -o "$OUT_PREFIX_ENP" "$VCF_FILE"
+
+echo "Filtering ESP samples from $VCF_FILE..."
+bcftools view -Oz -s "$ESP_LIST" -o "$OUT_PREFIX_ESP" "$VCF_FILE"
+
+echo "Filtering GOC samples from $VCF_FILE..."
+bcftools view -Oz -s "$GOC_LIST" -o "$OUT_PREFIX_GOC" "$VCF_FILE"
+
+# Indexing. 
+echo "Indexing output VCFs..."
+bcftools index "$OUT_PREFIX_ENP"
+bcftools index "$OUT_PREFIX_ESP"
