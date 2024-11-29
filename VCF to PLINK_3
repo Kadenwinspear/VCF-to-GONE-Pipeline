@@ -1,0 +1,28 @@
+
+
+
+module load vcftools/0.1.16
+
+# Define input and output directories. 
+
+input_dir="/data/users/thatdude/bluewhaleref_split_pops/GOC/biSNPsONLYFiltered"        s
+output_dir="/data/users/thatdude/bluewhaleref_split_pops/GOC/biSNPsONLYFiltered/plink"   
+
+# Ensure output directory exists
+mkdir -p "$output_dir"
+mkdir -p logs
+
+# Use SLURM_ARRAY_TASK_ID. Generates the task ID. 
+FILE_ID=$(printf "%02d" $SLURM_ARRAY_TASK_ID)
+VCF_FILE="${input_dir}/JointCalls_08_b_VariantFiltration_${FILE_ID}_GOC_population_biallelic_snps.vcf.gz"
+BASENAME="JointCalls_08_b_VariantFiltration_${FILE_ID}_GOC_population_biallelic_snps"
+
+# Check if the VCF file exists and then convert it to PLINK (ped / map) format.
+if [ -f "$VCF_FILE" ]; then
+    echo "Converting ${VCF_FILE} to PED/MAP format..."
+    vcftools --gzvcf "$VCF_FILE" --plink --out "${output_dir}/${BASENAME}"
+
+    echo "Conversion complete for ${VCF_FILE}. Output stored in ${output_dir}/${BASENAME}.*"
+else
+    echo "VCF file not found: ${VCF_FILE}"
+fi
